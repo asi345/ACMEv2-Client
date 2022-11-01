@@ -141,33 +141,35 @@ class ACMEClient(object):
         self.finalize = res['finalize']
         self.auths = res['authorizations']
 
-    def fetchChallenge(self, type):
-        data = {'protected':None, 'payload':None, 'signature':None}
-
-        protected = {}
-        protected['alg'] = 'RS256'
-        protected['kid'] = self.accountUrl
-        protected['nonce'] = self.nonce
-        protected['url'] = self.auths[0]
-        data['protected'] = base64.urlsafe_b64encode(json.dumps(protected).encode('utf-8')).rstrip(b"=").decode('utf-8')
- 
-        data['payload'] = ''
-
-        headpay = f"{data['protected']}.{data['payload']}"
-        signature = self.privateKey.sign(headpay.encode('utf-8'), padding.PKCS1v15(), hashes.SHA256())
-        data['signature'] = base64.urlsafe_b64encode(signature).rstrip(b'=').decode('utf-8')
-
-        headers = {'Content-type': 'application/jose+json'}
+    def fetchChallenge(self, typ):
         for auth in self.auths:
+            data = {'protected':None, 'payload':None, 'signature':None}
+
+            protected = {}
+            protected['alg'] = 'RS256'
+            protected['kid'] = self.accountUrl
+            protected['nonce'] = self.nonce
+            protected['url'] = auth
+            data['protected'] = base64.urlsafe_b64encode(json.dumps(protected).encode('utf-8')).rstrip(b"=").decode('utf-8')
+    
+            data['payload'] = ''
+
+            headpay = f"{data['protected']}.{data['payload']}"
+            signature = self.privateKey.sign(headpay.encode('utf-8'), padding.PKCS1v15(), hashes.SHA256())
+            data['signature'] = base64.urlsafe_b64encode(signature).rstrip(b'=').decode('utf-8')
+
+            headers = {'Content-type': 'application/jose+json'}
             res = requests.post(auth, headers=headers, data=json.dumps(data), verify='pebble.minica.pem')
-            #print(res.status_code, res.content)
+            #print(type(res), res.status_code, res.content)
             if 'Replay-Nonce' in res.headers:
                 self.nonce = res.headers['Replay-Nonce']
             else:
                 self.nonce = self.getNonce()
             res = res.json()
+            print(res.keys())
+            print(res)
             for chal in res['challenges']:
-                if type == chal['type']:
+                if typ == chal['type']:
                     self.chalUrls.append(chal['url'])
                     self.tokens.append(chal['token'])
                     hasher = sha256(self.thumbprint.encode('utf-8')).digest()
