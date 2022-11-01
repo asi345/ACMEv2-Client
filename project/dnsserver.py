@@ -1,4 +1,4 @@
-from dnslib import textwrap, DNSRecord
+from dnslib import textwrap
 from dnslib.server import DNSServer
 from dnslib.zoneresolver import ZoneResolver
 
