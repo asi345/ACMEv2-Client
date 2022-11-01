@@ -11,13 +11,19 @@ parser.add_argument('--domain', type=str, action='append', required=True, help='
 parser.add_argument('--revoke', action='store_true', help='if the certificate will be removed or not')
 
 args = parser.parse_args()
-print(args)
+typ = args.type[:-2] + '-' + args.type[-2:]
 
-
-client = ACMEClient()
+client = ACMEClient(args.dir)
 client.setupUrls()
 client.getNonce()
 client.createAccount()
-client.submitOrder(['netsec.ethz.ch'])
-client.fetchChallenge('dns-01')
-client.pickChallenge()
+client.submitOrder(args.domain)
+client.fetchChallenge(typ)
+
+client.chalhttp(args.domain, args.record)
+
+client.createCsr(args.domain)
+client.finishIt()
+client.getCert()
+
+client.setupHttpServers()

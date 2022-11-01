@@ -1,3 +1,4 @@
 #!/bin/bash
 
 echo "Compile your project here"
+pip3 install -r requirements.txt

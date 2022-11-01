@@ -1,0 +1,11 @@
+argparse
+requests
+base64
+json
+cryptography
+binascii
+flask
+threading
+dnslib
+hashlib
+time
