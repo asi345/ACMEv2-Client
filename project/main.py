@@ -20,7 +20,10 @@ client.createAccount()
 client.submitOrder(args.domain)
 client.fetchChallenge(typ)
 
-client.chalhttp(args.domain, args.record)
+if typ == 'http-01':
+    client.chalhttp(args.domain, args.record)
+else:
+    client.chaldns()
 
 client.createCsr(args.domain)
 client.finishIt()

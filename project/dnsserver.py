@@ -12,4 +12,11 @@ class DNSserver:
         self.server.start_thread()
     
     def stop(self):
-        self.server.stop()
+        #self.server.thread.join()
+        self.server.server.server_close()
+
+    def setZone(self, zone):
+        self.stop()
+        self.resolver = ZoneResolver(zone=textwrap.dedent(zone))
+        self.server = DNSServer(resolver=self.resolver, address='0.0.0.0', port=10053, tcp=False)
+        self.start()

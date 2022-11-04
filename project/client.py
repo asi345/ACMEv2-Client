@@ -34,7 +34,8 @@ class ACMEClient(object):
         self.finalize = None
         self.auths = []
         self.chalUrls = []
-        self.tokens = []
+        self.domainUrls = {}
+        self.tokens = {}
         self.thumbprint = None
         self.keyAuths = {}
         self.certPrivKey = None
@@ -170,7 +171,8 @@ class ACMEClient(object):
             for chal in res['challenges']:
                 if typ == chal['type']:
                     self.chalUrls.append(chal['url'])
-                    self.tokens.append(chal['token'])
+                    self.domainUrls[chal['url']] = res['identifier']['value']
+                    self.tokens[chal['url']] = chal['token']
                     hasher = sha256(self.thumbprint.encode('utf-8')).digest()
                     self.keyAuths[chal['token']] = f"{chal['token']}.{base64.urlsafe_b64encode(hasher).rstrip(b'=').decode('utf-8')}"
                     break
@@ -228,7 +230,7 @@ class ACMEClient(object):
             res = res.json()
             if res['status'] == 'valid':
                 return
-            sleep(3)
+            sleep(2)
 
     def pollOrder(self, state):
         for i in range(5):
@@ -258,7 +260,7 @@ class ACMEClient(object):
             res = res.json()
             if res['status'] == state:
                 return res
-            sleep(3)      
+            sleep(2)      
 
     def chalhttp(self, domains, record):
         zone = '\n'.join([f"{domain}. 60 A {record}" for domain in domains])
@@ -274,11 +276,42 @@ class ACMEClient(object):
 
         self.pollOrder('ready')
 
-    def chaldns(self, domains):
-        b64keyAuths = [base64.urlsafe_b64encode(sha256(keyAuth).digest()).rstrip(b"=").decode('utf-8') for keyAuth in self.keyAuths]
-        zone = '\n'.join([f'_acme-challenge.{domain}. 300 IN TXT "{b64keyAuth}"' for domain, b64keyAuth in zip(domains, b64keyAuths)])
-        dns = DNSserver(zone)
+    def chaldns(self):
+        dns = DNSserver(zone='')
         dns.start()
+        for chalUrl in self.chalUrls:
+            keyAuth = self.keyAuths[self.tokens[chalUrl]]
+            b64keyAuth = base64.urlsafe_b64encode(sha256(keyAuth.encode('utf-8')).digest()).rstrip(b"=").decode('utf-8')
+            zone = f'_acme-challenge.{self.domainUrls[chalUrl]}. 300 IN TXT "{b64keyAuth}"'
+            dns.setZone(zone)
+
+            data = {'protected':None, 'payload':None, 'signature':None}
+
+            protected = {}
+            protected['alg'] = 'RS256'
+            protected['kid'] = self.accountUrl
+            protected['nonce'] = self.nonce
+            protected['url'] = chalUrl
+            data['protected'] = base64.urlsafe_b64encode(json.dumps(protected).encode('utf-8')).rstrip(b"=").decode('utf-8')
+
+            payload = {}
+            data['payload'] = base64.urlsafe_b64encode(json.dumps(payload).encode('utf-8')).rstrip(b"=").decode('utf-8')
+
+            headpay = f"{data['protected']}.{data['payload']}"
+            signature = self.privateKey.sign(headpay.encode('utf-8'), padding.PKCS1v15(), hashes.SHA256())
+            data['signature'] = base64.urlsafe_b64encode(signature).rstrip(b'=').decode('utf-8')
+
+            headers = {'Content-type': 'application/jose+json'}
+            res = requests.post(chalUrl, headers=headers, data=json.dumps(data), verify='pebble.minica.pem')
+            #print(res.status_code, res.content)
+            if 'Replay-Nonce' in res.headers:
+                self.nonce = res.headers['Replay-Nonce']
+            else:
+                self.nonce = self.getNonce()
+
+            self.pollChallenge(chalUrl)
+
+        self.pollOrder('ready')
 
     def createCsr(self, domains):
         csr = x509.CertificateSigningRequestBuilder().subject_name(x509.Name([
@@ -322,7 +355,6 @@ class ACMEClient(object):
 
     def getCert(self):
         self.certUrl = self.pollOrder('valid')['certificate']
-        #self.httpthread.join()
 
         data = {'protected':None, 'payload':None, 'signature':None}
 
