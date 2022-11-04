@@ -42,6 +42,7 @@ class ACMEClient(object):
         self.csr = None
         self.certUrl = None
         self.certificate = None
+        self.httpthread = None
         self.getPrivateKey()
         self.getPublicKey()
 
@@ -166,8 +167,6 @@ class ACMEClient(object):
             else:
                 self.nonce = self.getNonce()
             res = res.json()
-            print(res.keys())
-            print(res)
             for chal in res['challenges']:
                 if typ == chal['type']:
                     self.chalUrls.append(chal['url'])
@@ -262,20 +261,25 @@ class ACMEClient(object):
             sleep(3)      
 
     def chalhttp(self, domains, record):
-        zone = "\n".join([f"{domain}. 60 A {record}" for domain in domains])
+        zone = '\n'.join([f"{domain}. 60 A {record}" for domain in domains])
         dns = DNSserver(zone)
         dns.start()
 
-        httpthread = threading.Thread(target=starthttp, args=('0.0.0.0', self.keyAuths))
-        httpthread.start()
+        self.httpthread = threading.Thread(target=starthttp, args=('0.0.0.0', self.keyAuths))
+        self.httpthread.start()
 
         self.pickChallenges()
         for chalUrl in self.chalUrls:
             self.pollChallenge(chalUrl)
 
-        dns.stop()
         self.pollOrder('ready')
-    
+
+    def chaldns(self, domains):
+        b64keyAuths = [base64.urlsafe_b64encode(sha256(keyAuth).digest()).rstrip(b"=").decode('utf-8') for keyAuth in self.keyAuths]
+        zone = '\n'.join([f'_acme-challenge.{domain}. 300 IN TXT "{b64keyAuth}"' for domain, b64keyAuth in zip(domains, b64keyAuths)])
+        dns = DNSserver(zone)
+        dns.start()
+
     def createCsr(self, domains):
         csr = x509.CertificateSigningRequestBuilder().subject_name(x509.Name([
             x509.NameAttribute(NameOID.COUNTRY_NAME, 'TR'),
@@ -318,6 +322,7 @@ class ACMEClient(object):
 
     def getCert(self):
         self.certUrl = self.pollOrder('valid')['certificate']
+        self.httpthread.join()
 
         data = {'protected':None, 'payload':None, 'signature':None}
 
