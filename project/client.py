@@ -322,7 +322,7 @@ class ACMEClient(object):
 
     def getCert(self):
         self.certUrl = self.pollOrder('valid')['certificate']
-        self.httpthread.join()
+        #self.httpthread.join()
 
         data = {'protected':None, 'payload':None, 'signature':None}
 
