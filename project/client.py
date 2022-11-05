@@ -389,3 +389,31 @@ class ACMEClient(object):
 
         stopthread = threading.Thread(target=startdown, args=['0.0.0.0'])
         stopthread.start()
+
+    def revoke(self):
+        data = {'protected':None, 'payload':None, 'signature':None}
+
+        protected = {}
+        protected['alg'] = 'RS256'
+        protected['kid'] = self.accountUrl
+        protected['nonce'] = self.nonce
+        protected['url'] = self.urls['revokeCert']
+        data['protected'] = base64.urlsafe_b64encode(json.dumps(protected).encode('utf-8')).rstrip(b"=").decode('utf-8')
+
+        payload = {}
+        certPem = x509.load_pem_x509_certificate(self.certificate)
+        payload['certificate'] = base64.urlsafe_b64encode(certPem.public_bytes(encoding=serialization.Encoding.DER)
+            ).rstrip(b"=").decode('utf-8')
+        data['payload'] = base64.urlsafe_b64encode(json.dumps(payload).encode('utf-8')).rstrip(b"=").decode('utf-8')
+
+        headpay = f"{data['protected']}.{data['payload']}"
+        signature = self.privateKey.sign(headpay.encode('utf-8'), padding.PKCS1v15(), hashes.SHA256())
+        data['signature'] = base64.urlsafe_b64encode(signature).rstrip(b'=').decode('utf-8')
+
+        headers = {'Content-type': 'application/jose+json'}
+        res = requests.post(self.urls['revokeCert'], headers=headers, data=json.dumps(data), verify='pebble.minica.pem')
+        #print(res.status_code, res.content, res.headers)
+        if 'Replay-Nonce' in res.headers:
+            self.nonce = res.headers['Replay-Nonce']
+        else:
+            self.nonce = self.getNonce()

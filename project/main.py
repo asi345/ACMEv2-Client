@@ -30,3 +30,6 @@ client.finishIt()
 client.getCert()
 
 client.setupHttpServers()
+
+if args.revoke:
+    client.revoke()
