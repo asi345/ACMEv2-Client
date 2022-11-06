@@ -279,11 +279,17 @@ class ACMEClient(object):
     def chaldns(self):
         dns = DNSserver(zone='')
         dns.start()
+
+        keyAuths = [self.keyAuths[self.tokens[chalUrl]] for chalUrl in self.chalUrls]
+        b64keyAuths = [base64.urlsafe_b64encode(sha256(keyAuth.encode('utf-8')).digest()).rstrip(b"=").decode('utf-8')
+            for keyAuth in keyAuths]
+        zone = '\n'.join([f'_acme-challenge.{self.domainUrls[chalUrl]}. 300 IN TXT "{b64keyAuth}"' for b64keyAuth, chalUrl in zip(b64keyAuths, self.chalUrls)])
+        dns.setZone(zone)
         for chalUrl in self.chalUrls:
-            keyAuth = self.keyAuths[self.tokens[chalUrl]]
-            b64keyAuth = base64.urlsafe_b64encode(sha256(keyAuth.encode('utf-8')).digest()).rstrip(b"=").decode('utf-8')
-            zone = f'_acme-challenge.{self.domainUrls[chalUrl]}. 300 IN TXT "{b64keyAuth}"'
-            dns.setZone(zone)
+            #keyAuth = self.keyAuths[self.tokens[chalUrl]]
+            #b64keyAuth = base64.urlsafe_b64encode(sha256(keyAuth.encode('utf-8')).digest()).rstrip(b"=").decode('utf-8')
+            #zone = f'_acme-challenge.{self.domainUrls[chalUrl]}. 300 IN TXT "{b64keyAuth}"'
+            #dns.setZone(zone)
 
             data = {'protected':None, 'payload':None, 'signature':None}
 
@@ -312,7 +318,6 @@ class ACMEClient(object):
             self.pollChallenge(chalUrl)
 
         self.pollOrder('ready')
-        dns.stop()
 
     def createCsr(self, domains):
         csr = x509.CertificateSigningRequestBuilder().subject_name(x509.Name([
