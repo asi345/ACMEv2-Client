@@ -33,3 +33,5 @@ client.setupHttpServers()
 
 if args.revoke:
     client.revoke()
+
+client.readyForDnsTests(args.domain, args.record)

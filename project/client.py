@@ -44,6 +44,7 @@ class ACMEClient(object):
         self.certUrl = None
         self.certificate = None
         self.httpthread = None
+        self.dns = None
         self.getPrivateKey()
         self.getPublicKey()
 
@@ -277,14 +278,14 @@ class ACMEClient(object):
         self.pollOrder('ready')
 
     def chaldns(self):
-        dns = DNSserver(zone='')
-        dns.start()
+        self.dns = DNSserver(zone='')
+        self.dns.start()
 
         keyAuths = [self.keyAuths[self.tokens[chalUrl]] for chalUrl in self.chalUrls]
         b64keyAuths = [base64.urlsafe_b64encode(sha256(keyAuth.encode('utf-8')).digest()).rstrip(b"=").decode('utf-8')
             for keyAuth in keyAuths]
-        zone = '\n'.join([f'_acme-challenge.{self.domainUrls[chalUrl]}. 300 TXT "{b64keyAuth}"' for b64keyAuth, chalUrl in zip(b64keyAuths, self.chalUrls)])
-        dns.setZone(zone)
+        zone = '\n'.join([f'_acme-challenge.{self.domainUrls[chalUrl]}. 300 IN TXT "{b64keyAuth}"' for b64keyAuth, chalUrl in zip(b64keyAuths, self.chalUrls)])
+        self.dns.setZone(zone)
         for chalUrl in self.chalUrls:
             #keyAuth = self.keyAuths[self.tokens[chalUrl]]
             #b64keyAuth = base64.urlsafe_b64encode(sha256(keyAuth.encode('utf-8')).digest()).rstrip(b"=").decode('utf-8')
@@ -309,7 +310,7 @@ class ACMEClient(object):
 
             headers = {'Content-type': 'application/jose+json'}
             res = requests.post(chalUrl, headers=headers, data=json.dumps(data), verify='pebble.minica.pem')
-            print('dns', res.status_code, res.content)
+            #print('dns', res.status_code, res.content)
             if 'Replay-Nonce' in res.headers:
                 self.nonce = res.headers['Replay-Nonce']
             else:
@@ -423,3 +424,8 @@ class ACMEClient(object):
             self.nonce = res.headers['Replay-Nonce']
         else:
             self.nonce = self.getNonce()
+
+    def readyForDnsTests(self, domains, record): #After the protocol runs, res.resolve(domain, "A") call is made, it is similar
+        # to DNS queries for HTTP challenge
+        zone = '\n'.join([f"{domain}. 60 A {record}" for domain in domains])
+        self.dns.setZone(zone)
