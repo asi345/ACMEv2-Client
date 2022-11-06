@@ -283,7 +283,7 @@ class ACMEClient(object):
         keyAuths = [self.keyAuths[self.tokens[chalUrl]] for chalUrl in self.chalUrls]
         b64keyAuths = [base64.urlsafe_b64encode(sha256(keyAuth.encode('utf-8')).digest()).rstrip(b"=").decode('utf-8')
             for keyAuth in keyAuths]
-        zone = '\n'.join([f'_acme-challenge.{self.domainUrls[chalUrl]}. 300 IN TXT "{b64keyAuth}"' for b64keyAuth, chalUrl in zip(b64keyAuths, self.chalUrls)])
+        zone = '\n'.join([f'_acme-challenge.{self.domainUrls[chalUrl]}. 300 TXT "{b64keyAuth}"' for b64keyAuth, chalUrl in zip(b64keyAuths, self.chalUrls)])
         dns.setZone(zone)
         for chalUrl in self.chalUrls:
             #keyAuth = self.keyAuths[self.tokens[chalUrl]]
