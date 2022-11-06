@@ -303,7 +303,7 @@ class ACMEClient(object):
 
             headers = {'Content-type': 'application/jose+json'}
             res = requests.post(chalUrl, headers=headers, data=json.dumps(data), verify='pebble.minica.pem')
-            #print(res.status_code, res.content)
+            print('dns', res.status_code, res.content)
             if 'Replay-Nonce' in res.headers:
                 self.nonce = res.headers['Replay-Nonce']
             else:
@@ -373,7 +373,7 @@ class ACMEClient(object):
 
         headers = {'Content-type': 'application/jose+json'}
         res = requests.post(self.certUrl, headers=headers, data=json.dumps(data), verify='pebble.minica.pem')
-        #print(res.status_code, res.content, res.headers)
+        print('cert', res.content, res.headers)
         if 'Replay-Nonce' in res.headers:
             self.nonce = res.headers['Replay-Nonce']
         else:
