@@ -312,6 +312,7 @@ class ACMEClient(object):
             self.pollChallenge(chalUrl)
 
         self.pollOrder('ready')
+        dns.stop()
 
     def createCsr(self, domains):
         csr = x509.CertificateSigningRequestBuilder().subject_name(x509.Name([
@@ -373,7 +374,7 @@ class ACMEClient(object):
 
         headers = {'Content-type': 'application/jose+json'}
         res = requests.post(self.certUrl, headers=headers, data=json.dumps(data), verify='pebble.minica.pem')
-        print('cert', res.content, res.headers)
+        #print('cert', res.content, res.headers)
         if 'Replay-Nonce' in res.headers:
             self.nonce = res.headers['Replay-Nonce']
         else:
