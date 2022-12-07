@@ -114,8 +114,3 @@ The fraction is the final score reported in the output of the `give-score` runne
 Note that in the beginning of the project some test cases might be added. If this happens, we will clearly communicate this, and we guarantee not to add any test cases in the last two weeks of the project.
 
 Note also that the CI server does not have unlimited resources. It is likely that testing times will increase when many students start submitting solutions at the same time. We will not accept this as an excuse for failed tests and we will not extend the deadline because of this. There is plenty of time to submit and most testing can be performed locally with Pebble.
-
-
-## 7 | Student Progress
-The following automatically generated histogram shows the distribution of achieved points from all current student project implementations:
-![Distribution of ACME Project scores from all current student implementations](https://course.netsec.inf.ethz.ch/project-acme-scores.png)
