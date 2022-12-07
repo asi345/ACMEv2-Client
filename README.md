@@ -1,5 +1,13 @@
 # Project: ACME Client
 
+My solution to the first project of Network Security Autumn Semester 2022 course in ETH Zurich. I
+implemented a ACMEv2 Client from scratch, without using any ACME protocol libraries. I only used
+standard libraries and made the requests myself. Pebble acts as an example server and is used by me to
+test my project.
+
+The job of an ACME Client is to obtain SSL/TLS certificates for specified domains by solving various
+kind of challenges requested by ACME Server.
+
 ## 1 | ACME Protocol
 Public Key Infrastructures (PKIs) using X.509 certificates are used for many purposes, the most significant of which is the authentication of domain names. Certificate Authorities (CAs) are trusted to verify that an applicant for a certificate legitimately represents the domain name(s) in the certificate. Traditionally, this verification is done through various ad-hoc methods.
 
